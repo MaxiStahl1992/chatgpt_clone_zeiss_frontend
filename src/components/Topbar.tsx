@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquarePlus, ThermometerIcon } from 'lucide-react';
 import Dropdown from './Dropdown';
+import axios from 'axios';
 
 type TopbarProps = {
   selectedModel: string;
   selectedTemperature: string;
   setSelectedModel: (model: string) => void;
   setSelectedTemperature: (temperature: string) => void;
+  handleNewChat: () => void;
 };
 
 type Options = {
@@ -19,6 +21,7 @@ const Topbar: React.FC<TopbarProps> = ({
   selectedTemperature,
   setSelectedModel,
   setSelectedTemperature,
+  handleNewChat
 }: TopbarProps) => {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [availableTemperatures, setAvailableTemperatures] = useState<string[]>([]);
@@ -27,29 +30,23 @@ const Topbar: React.FC<TopbarProps> = ({
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/get-options/', {
-          method: 'GET',
+        const response = await axios.get('http://localhost:8000/api/get-options/', {
           headers: {
             'Content-Type': 'application/json',
           },
-          credentials: 'include',
+          withCredentials: true,
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch options: ${response.status} ${response.statusText}`);
-        }
-
-        const data: Options= await response.json(); 
+        const data: Options = response.data;
 
         setAvailableModels(data.models);
         setAvailableTemperatures(data.temperatures);
 
-        
         if (!selectedModel && data.models.length > 0) {
           setSelectedModel(data.models[0]);
         }
         if (!selectedTemperature && data.temperatures.length > 0) {
-          setSelectedTemperature(data.temperatures[1]); 
+          setSelectedTemperature(data.temperatures[1]);
         }
       } catch (error) {
         console.error('Error fetching options:', error);
@@ -87,6 +84,7 @@ const Topbar: React.FC<TopbarProps> = ({
           }></Dropdown>
         <button
           className="bg-transparent outline-none hover:outline hover:outline-primary focus:outline focus:outline-2 focus:outline-primary border-none active:scale-95 trainsition-transform duration-75"
+          onClick={handleNewChat}
           onMouseUp={(e) => e.currentTarget.blur()}>
           <MessageSquarePlus
             size={24}

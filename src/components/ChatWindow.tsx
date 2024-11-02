@@ -3,9 +3,10 @@ import WeatherCard from './cards/WeatherCard';
 import StockCard from './cards//StockCard';
 import PromptCard, { PromptCardProps } from './cards/PromptCard';
 import LoadingDots from './utils/LoadingDots';
-import { Send, Sparkles } from 'lucide-react';
+import { ClipboardIcon, Send, Sparkles } from 'lucide-react';
 import { getCsrfToken } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
+import axios from 'axios';
 
 const examplePrompts: PromptCardProps[] = [
   {
@@ -27,23 +28,46 @@ const examplePrompts: PromptCardProps[] = [
 
 type Message = {
   sender: 'user' | 'ai';
-  text: string;
+  content: string;
+  chatId?: string;
 };
 
 type ChatWindowProps = {
   selectedModel: string;
   selectedTemperature: string;
+  selectedChatId: string;
+  handleNewChat: () => void;
 };
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
   selectedModel,
   selectedTemperature,
+  selectedChatId,
+  handleNewChat,
 }: ChatWindowProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageStartRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selectedChatId) {
+      console.log(selectedChatId);
+      const fetchChatHistory = async () => {
+        try {
+          const response = await axios.get(
+            `http://localhost:8000/api/chat-history/${selectedChatId}/`,
+            { withCredentials: true }
+          );
+          setMessages(response.data.messages);
+        } catch (error) {
+          console.error('Error fetching chat history:', error);
+        }
+      };
+      fetchChatHistory();
+    }
+  }, [selectedChatId]);
 
   const scrollToBottom = () => {
     messageStartRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,13 +77,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     scrollToBottom();
   }, [messages]);
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        alert('Copied to clipboard!');
+      })
+      .catch((err) => {
+        console.error('Failed to copy text:', err);
+      });
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || isLoading) return;
 
     // Add user's message to state
     setMessages((prevMessages) => [
       ...prevMessages,
-      { sender: 'user', text: newMessage },
+      { sender: 'user', content: newMessage },
     ]);
     setNewMessage('');
     setIsLoading(true);
@@ -67,33 +102,33 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     try {
       const csrfToken = getCsrfToken();
 
-      const response = await fetch(
+      const response = await axios.post(
         'http://localhost:8000/api/generate-response/',
         {
-          method: 'POST',
+          chat_id: selectedChatId,
+          message: newMessage,
+          model: selectedModel,
+          temperature: selectedTemperature,
+        },
+        {
           headers: {
             'Content-Type': 'application/json',
             ...(csrfToken && { 'X-CSRFToken': csrfToken }),
           },
-          credentials: 'include',
-          body: JSON.stringify({
-            message: newMessage,
-            model: selectedModel,
-            temperature: selectedTemperature,
-          }),
+          withCredentials: true,
         }
       );
 
-      if (!response.ok) {
+      if (response.status !== 200) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.data;
 
       // Append AI's response to messages
       setMessages((prevMessages) => [
         ...prevMessages,
-        { sender: 'ai', text: data.choices[0].message.content },
+        { sender: 'ai', content: data.content},
       ]);
     } catch (error) {
       console.error('Error sending message:', error);
@@ -101,7 +136,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         ...prevMessages,
         {
           sender: 'ai',
-          text: "I'm sorry, something went wrong while fetching the response.",
+          content:
+            "I'm sorry, something went wrong while fetching the response.",
         },
       ]);
     } finally {
@@ -141,6 +177,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         )}
 
         {messages.length != 0 &&
+          selectedChatId &&
           messages.map((message, index) => {
             const isAi = message.sender === 'ai';
             return (
@@ -151,56 +188,80 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                   isAi ? 'justify-start' : 'justify-end'
                 }`}>
                 {isAi ? (
-                  <div className="max-w-[80%] rounded-3xl p-4 flex items-center">
-                    <Sparkles
-                      size={28}
-                      className="flex-shrink-0 pr-2"
-                      color="#141E8C"
-                    />
-                    <p className="text-card-foreground">
-                      <ReactMarkdown>{message.text}</ReactMarkdown>
-                    </p>
+                  <div className="max-w-[80%] p-4">
+                    <div className="pb-1 flex items-center">
+                      <Sparkles
+                        size={28}
+                        className="flex-shrink-0 pr-2"
+                        color="#141E8C"
+                      />
+                      <p className="text-card-foreground">
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                      </p>
+                    </div>
+                    <div className='flex justify-end'>
+                      <ClipboardIcon
+                        size={12}
+                        className=" text-gray-500 hover:text-blue-500 cursor-pointer"
+                        onClick={() => copyToClipboard(message.content)}
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="max-w-[80%] bg-popover rounded-2xl p-4 shadow-lg">
-                    <p className="text-card-foreground">{message.text}</p>
+                    <p className="text-card-foreground">{message.content}</p>
                   </div>
                 )}
               </div>
             );
           })}
-        {isLoading && <LoadingDots/>}
+        {isLoading && <LoadingDots />}
       </div>
 
       <div className="relative mt-auto">
-        <textarea
-          ref={textareaRef}
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onInput={handleInput}
-          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-          className="w-full bg-background shadow-lg rounded-3xl max-h-[20vh] overflow-y-auto resize-none border p-4 pr-[65px] outline-none"
-          style={{
-            height: 'auto',
-            minHeight: '2rem',
-            maxHeight: '20vh',
-            overflowWrap: 'break-word',
-          }}
-          placeholder="Ask me something..."
-        />
-        <button
-          onClick={sendMessage}
-          disabled={isLoading}
-          className={`absolute right-3 bottom-4 p-2 rounded-full outline-none active:scale-95 active:outline-none transition-transform duration-75 ${
-            isLoading
-              ? 'bg-gray-400 cursor-not-allowed active:scale-100'
-              : 'bg-primary text-white'
-          }`}>
-          <Send
-            size={24}
-            className="pr-1"
-          />
-        </button>
+        {selectedChatId && (
+          <>
+            <textarea
+              ref={textareaRef}
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onInput={handleInput}
+              onKeyDown={(e) =>
+                e.key === 'Enter' && !e.shiftKey && sendMessage()
+              }
+              className="w-full bg-background shadow-lg rounded-3xl max-h-[20vh] overflow-y-auto resize-none border p-4 pr-[65px] outline-none"
+              style={{
+                height: 'auto',
+                minHeight: '2rem',
+                maxHeight: '20vh',
+                overflowWrap: 'break-word',
+              }}
+              placeholder="Ask me something..."
+            />
+            <button
+              onClick={sendMessage}
+              disabled={isLoading}
+              className={`absolute right-3 bottom-4 p-2 rounded-full outline-none active:scale-95 active:outline-none transition-transform duration-75 ${
+                isLoading
+                  ? 'bg-gray-400 cursor-not-allowed active:scale-100'
+                  : 'bg-primary text-white'
+              }`}>
+              <Send
+                size={24}
+                className="pr-1"
+              />
+            </button>
+          </>
+        )}
+        {!selectedChatId && (
+          <div className="flex justify-center w-full">
+            <button
+              className="bg-primary text-primary-foreground outline-none focus:outline-none active:scale-95 trainsition-transform duration-75"
+              onClick={handleNewChat}>
+              Start new chat
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
