@@ -1,13 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageSquarePlus, ThermometerIcon } from 'lucide-react';
 import Dropdown from './Dropdown';
 
-const availableModels = ['GPT-4o', 'GPT-4o-mini'];
-const availableTemperature = ['0.2', '0.7', '0.9'];
+type TopbarProps = {
+  selectedModel: string;
+  selectedTemperature: string;
+  setSelectedModel: (model: string) => void;
+  setSelectedTemperature: (temperature: string) => void;
+};
 
-const Topbar: React.FC = () => {
-  const [selectedModel, setSelectedModel] = useState('GPT-4o');
-  const [selectedTemperature, setSelectedTemperature] = useState('0.9');
+type Options = {
+  models: string[];
+  temperatures: string[];
+}
+
+const Topbar: React.FC<TopbarProps> = ({
+  selectedModel,
+  selectedTemperature,
+  setSelectedModel,
+  setSelectedTemperature,
+}: TopbarProps) => {
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableTemperatures, setAvailableTemperatures] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/get-options/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch options: ${response.status} ${response.statusText}`);
+        }
+
+        const data: Options= await response.json(); 
+
+        setAvailableModels(data.models);
+        setAvailableTemperatures(data.temperatures);
+
+        
+        if (!selectedModel && data.models.length > 0) {
+          setSelectedModel(data.models[0]);
+        }
+        if (!selectedTemperature && data.temperatures.length > 0) {
+          setSelectedTemperature(data.temperatures[1]); 
+        }
+      } catch (error) {
+        console.error('Error fetching options:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOptions();
+  }, []);
+
+  if (isLoading) {
+    return <div>Loading options...</div>;
+  }
 
   return (
     <div className="flex justify-between items-center px-4 py-2">
@@ -19,7 +75,7 @@ const Topbar: React.FC = () => {
 
       <div className="flex flex-row">
         <Dropdown
-          options={availableTemperature}
+          options={availableTemperatures}
           selected={selectedTemperature}
           onSelect={setSelectedTemperature}
           iconOnly={true}

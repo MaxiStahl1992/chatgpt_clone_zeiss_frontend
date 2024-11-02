@@ -1,9 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import WeatherCard from './cards/WeatherCard';
 import StockCard from './cards//StockCard';
 import PromptCard, { PromptCardProps } from './cards/PromptCard';
+import LoadingDots from './utils/LoadingDots';
 import { Send, Sparkles } from 'lucide-react';
 import { getCsrfToken } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
 
 const examplePrompts: PromptCardProps[] = [
   {
@@ -19,7 +21,7 @@ const examplePrompts: PromptCardProps[] = [
   {
     title: 'Tell me something interesting about Max',
     description:
-      'Max is a huge fan of Lord of the Rings and has watched every movie at least once a year.',
+      'Max is a huge fan of Lord of the Rings and watches every movie at least once a year.',
   },
 ];
 
@@ -28,19 +30,39 @@ type Message = {
   text: string;
 };
 
-const ChatWindow: React.FC = () => {
+type ChatWindowProps = {
+  selectedModel: string;
+  selectedTemperature: string;
+};
+
+const ChatWindow: React.FC<ChatWindowProps> = ({
+  selectedModel,
+  selectedTemperature,
+}: ChatWindowProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messageStartRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messageStartRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || isLoading) return;
 
     // Add user's message to state
     setMessages((prevMessages) => [
       ...prevMessages,
       { sender: 'user', text: newMessage },
     ]);
+    setNewMessage('');
+    setIsLoading(true);
 
     try {
       const csrfToken = getCsrfToken();
@@ -56,8 +78,8 @@ const ChatWindow: React.FC = () => {
           credentials: 'include',
           body: JSON.stringify({
             message: newMessage,
-            model: 'gpt-4o',
-            temperature: 0.7,
+            model: selectedModel,
+            temperature: selectedTemperature,
           }),
         }
       );
@@ -83,7 +105,7 @@ const ChatWindow: React.FC = () => {
         },
       ]);
     } finally {
-      setNewMessage('');
+      setIsLoading(false);
     }
   };
 
@@ -98,79 +120,89 @@ const ChatWindow: React.FC = () => {
   // Render messages if any exist
   return (
     <div className="flex-grow flex flex-col p-4 h-full">
-    {/* Message List */}
-    <div className="flex-grow overflow-y-scroll mb-4 max-h-[calc(100vh-190px)]">
-      {messages.length === 0 ? (
-        <div className="grid gap-4">
-          {/* Top Row: Weather and Stock Overview */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <WeatherCard />
-            <StockCard />
-          </div>
-          {/* Bottom Row: Example Prompts */}
-          <div className="grid grid-cols-3 gap-4">
-            {examplePrompts.map((examplePrompt, index) => (
-              <PromptCard
-                key={index}
-                title={examplePrompt.title}
-                description={examplePrompt.description}
-              />
-            ))}
-          </div>
-        </div>
-      ) : (
-        messages.map((message, index) => {
-          const isAi = message.sender === 'ai';
-          return (
-            <div
-              key={index}
-              className={`mb-4 w-full flex ${
-                isAi ? 'justify-start' : 'justify-end'
-              }`}>
-              {isAi ? (
-                <div className="max-w-[80%] rounded-3xl p-4 flex items-center bg-red-300">
-                  <Sparkles
-                    size={28}
-                    className="flex-shrink-0 pr-2"
-                    color="#141E8C"
-                  />
-                  <p className="text-card-foreground">{message.text}</p>
-                </div>
-              ) : (
-                <div className="max-w-[80%] bg-blue-300 rounded-2xl p-4 shadow-lg">
-                  <p className="text-card-foreground">{message.text}</p>
-                </div>
-              )}
+      <div className="flex-grow overflow-y-scroll mb-4 max-h-[calc(100vh-190px)]">
+        {messages.length === 0 && !isLoading && (
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <WeatherCard />
+              <StockCard />
             </div>
-          );
-        })
-      )}
-    </div>
 
-    {/* Message Input Area */}
-    <div className="relative mt-auto">
-      <textarea
-        ref={textareaRef}
-        value={newMessage}
-        onChange={(e) => setNewMessage(e.target.value)}
-        onInput={handleInput}
-        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-        className="w-full bg-background shadow-lg rounded-3xl max-h-[20vh] overflow-y-auto resize-none border p-4 pr-[65px] outline-none"
-        style={{
-          height: 'auto',
-          minHeight: '2rem',
-          maxHeight: '20vh',
-          overflowWrap: 'break-word',
-        }}
-        placeholder="Type your text here..."
-      />
-      <button
-        onClick={sendMessage}
-        className="absolute right-3 bottom-4 bg-primary text-white p-2 rounded-full outline-none active:scale-95 transition-transform duration-75">
-        <Send size={24} className="pr-1" />
-      </button>
+            <div className="grid grid-cols-3 gap-4">
+              {examplePrompts.map((examplePrompt, index) => (
+                <PromptCard
+                  key={index}
+                  title={examplePrompt.title}
+                  description={examplePrompt.description}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {messages.length != 0 &&
+          messages.map((message, index) => {
+            const isAi = message.sender === 'ai';
+            return (
+              <div
+                ref={messageStartRef}
+                key={index}
+                className={`mb-4 w-full flex ${
+                  isAi ? 'justify-start' : 'justify-end'
+                }`}>
+                {isAi ? (
+                  <div className="max-w-[80%] rounded-3xl p-4 flex items-center">
+                    <Sparkles
+                      size={28}
+                      className="flex-shrink-0 pr-2"
+                      color="#141E8C"
+                    />
+                    <p className="text-card-foreground">
+                      <ReactMarkdown>{message.text}</ReactMarkdown>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="max-w-[80%] bg-popover rounded-2xl p-4 shadow-lg">
+                    <p className="text-card-foreground">{message.text}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        {isLoading && <LoadingDots/>}
+      </div>
+
+      <div className="relative mt-auto">
+        <textarea
+          ref={textareaRef}
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onInput={handleInput}
+          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+          className="w-full bg-background shadow-lg rounded-3xl max-h-[20vh] overflow-y-auto resize-none border p-4 pr-[65px] outline-none"
+          style={{
+            height: 'auto',
+            minHeight: '2rem',
+            maxHeight: '20vh',
+            overflowWrap: 'break-word',
+          }}
+          placeholder="Ask me something..."
+        />
+        <button
+          onClick={sendMessage}
+          disabled={isLoading}
+          className={`absolute right-3 bottom-4 p-2 rounded-full outline-none active:scale-95 active:outline-none transition-transform duration-75 ${
+            isLoading
+              ? 'bg-gray-400 cursor-not-allowed active:scale-100'
+              : 'bg-primary text-white'
+          }`}>
+          <Send
+            size={24}
+            className="pr-1"
+          />
+        </button>
+      </div>
     </div>
-  </div>
   );
 };
 

@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import axios from 'axios'
 import './App.css'
 import ChatWindow from './components/ChatWindow'
-import MessageInput from './components/MessageInput'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
 
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedTemperature, setSelectedTemperature] = useState(null);
 
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -43,8 +44,16 @@ function App() {
     <div className='flex h-screen w-screen bg-gray-100'>
       <Sidebar />
       <div className='flex flex-col flex-grow max-h-full'>
-        <Topbar />
-        <ChatWindow />
+        <Topbar 
+          selectedModel={selectedModel}
+          selectedTemperature={selectedTemperature}
+          setSelectedModel={setSelectedModel}
+          setSelectedTemperature={setSelectedTemperature}
+        />
+        <ChatWindow 
+          selectedModel={selectedModel}
+          selectedTemperature={selectedTemperature}
+        />
       </div>
     </div>
   )

@@ -139,3 +139,16 @@ button:focus-visible {
     @apply bg-background text-foreground;
   }
 }
+
+.animate-bounce {
+  animation: bounce 0.6s infinite alternate;
+}
+
+@keyframes bounce {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-0.5rem);
+  }
+}
