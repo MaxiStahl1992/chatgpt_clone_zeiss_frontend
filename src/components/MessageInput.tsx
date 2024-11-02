@@ -1,5 +1,5 @@
 import { Send } from 'lucide-react';
-import React , { useRef }from 'react';
+import React , { useRef } from 'react';
 
 const MessageInput: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
