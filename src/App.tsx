@@ -10,7 +10,7 @@ import { getCsrfToken } from './lib/utils';
 export type Chat = {
   chatId: string;
   chatTitle: string;
-}
+};
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -45,12 +45,9 @@ function App() {
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        const response = await axios.get(
-          'http://localhost:8000/api/chats/',
-          {
-            withCredentials: true,
-          }
-        );
+        const response = await axios.get('http://localhost:8000/api/chats/', {
+          withCredentials: true,
+        });
         setChats(response.data.chats);
         if (response.data.chats.length > 0) {
           setSelectedChatId(response.data.chats[0].chat_id);
@@ -65,13 +62,17 @@ function App() {
   const handleNewChat = async () => {
     try {
       const csrfToken = getCsrfToken();
-      const response = await axios.post('http://localhost:8000/api/create-chat/', {}, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRFToken': csrfToken }),
-        },
-        withCredentials: true,
-      });
+      const response = await axios.post(
+        'http://localhost:8000/api/create-chat/',
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(csrfToken && { 'X-CSRFToken': csrfToken }),
+          },
+          withCredentials: true,
+        }
+      );
       const newChatId = response.data.chat_id;
       setChats((prev) => [...prev, newChatId]);
       setSelectedChatId(newChatId);
@@ -94,7 +95,7 @@ function App() {
           withCredentials: true,
         }
       );
-  
+
       setChats((prev) => prev.filter((chat) => chat.chatId !== chatId));
 
       if (selectedChatId === chatId) {
@@ -105,7 +106,6 @@ function App() {
       console.error('Error deleting chat:', error);
     }
   };
-
 
   if (isAuthenticated === null) {
     return <LoadingDots />;
@@ -118,14 +118,12 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen bg-gray-100">
-      <div className='w-[20%]'>
-      <Sidebar 
-        chats={chats} 
-        selectedChatId={selectedChatId} 
+      <Sidebar
+        chats={chats}
+        selectedChatId={selectedChatId}
         setSelectedChatId={setSelectedChatId}
         deleteChat={deleteChat}
       />
-      </div>
       <div className="flex flex-col flex-grow max-h-full">
         <Topbar
           selectedModel={selectedModel}
