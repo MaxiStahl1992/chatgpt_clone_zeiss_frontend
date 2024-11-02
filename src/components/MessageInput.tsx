@@ -7,8 +7,8 @@ const MessageInput: React.FC = () => {
   const handleInput = () => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = "auto"; // Reset height to auto to allow shrinking
-      textarea.style.height = `${textarea.scrollHeight}px`; // Set height based on content
+      textarea.style.height = "auto"; 
+      textarea.style.height = `${textarea.scrollHeight}px`;
     }
   };
 
