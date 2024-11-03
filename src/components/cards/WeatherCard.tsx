@@ -63,7 +63,6 @@ const WeatherCard: React.FC = () => {
             format: 'json',
           },
         });
-        console.log(response.data);
         const address = response.data.address;
         setLocationName(address.town || address.city || address.village || "Unkown");
       } catch (err) {

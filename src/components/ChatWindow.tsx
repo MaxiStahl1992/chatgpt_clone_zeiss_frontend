@@ -162,45 +162,41 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  const regenerateResponse = async () => {
-    setIsLoading(true);
-    const lastAiMessageIndex = [...messages].reverse().findIndex((msg) => msg.sender === 'ai');
-  
-    if (lastAiMessageIndex !== -1) {
-      const lastUserMessageIndex = messages
-        .slice(0, messages.length - 1 - lastAiMessageIndex)
-        .reverse()
-        .findIndex((msg) => msg.sender === 'user');
-        
-      const lastUserMessage =
-        lastUserMessageIndex !== -1
-          ? messages[messages.length - 1 - lastAiMessageIndex - lastUserMessageIndex - 1]
-          : null;
-  
-      try {
-        await axios.post(
-          `http://localhost:8000/api/regenerate-message/${selectedChatId}/`,
-          {},
-          {
-            headers: { 'X-CSRFToken': getCsrfToken() },
-            withCredentials: true,
-          }
-        );
-  
-        // Remove the last AI message from the frontend state
-        setMessages((prevMessages) =>
-          prevMessages.filter((_, index) => index !== messages.length - 1 - lastAiMessageIndex)
-        );
-  
-        // Re-fetch AI response for the last user message
-        if (lastUserMessage) {
-          await sendMessageHandler(lastUserMessage.content);
+const regenerateResponse = async () => {
+  // Find the last user message and AI response
+  setIsLoading(true);
+  const lastAiMessage = messages.slice().reverse().find((msg) => msg.sender === 'ai');
+
+  if (lastAiMessage) {
+    try {
+      // Call regenerate endpoint and handle response without triggering generate_response
+      const regenerateResponse = await axios.post(
+        `http://localhost:8000/api/regenerate-message/${selectedChatId}/`,
+        {},
+        {
+          headers: { 'X-CSRFToken': getCsrfToken() },
+          withCredentials: true,
         }
-      } catch (error) {
-        console.error('Error regenerating message:', error);
+      );
+
+      if (regenerateResponse.status === 200 && regenerateResponse.data.content) {
+        // Update messages without adding the last user message or triggering generate_response
+        setMessages((prevMessages) => [
+          ...prevMessages.filter((msg) => msg !== lastAiMessage), // Remove last AI message only
+          { sender: 'ai', content: regenerateResponse.data.content },
+        ]);
       }
+    } catch (error) {
+      console.error('Error regenerating message:', error);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { sender: 'ai', content: "Error regenerating the response, please try again." },
+      ]);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }
+};
 
   const handleInput = () => {
     const textarea = textareaRef.current;
