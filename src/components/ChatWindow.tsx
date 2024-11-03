@@ -7,7 +7,8 @@ import { getCsrfToken } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 import { fetchChatHistory, Message, sendMessage } from '@/services/chatService';
-import { set } from 'date-fns';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const examplePrompts: PromptCardProps[] = [
   {
@@ -119,22 +120,40 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: React.ReactNode) => {
+    const textToCopy = Array.isArray(text) ? text.join('') : text.toString();
     navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        alert('Copied to clipboard!');
-      })
-      .catch((err) => {
-        console.error('Failed to copy text:', err);
-      });
+      .writeText(textToCopy)
+      .then(() => alert('Copied to clipboard!'))
+      .catch((err) => console.error('Failed to copy text:', err));
+  };
+
+  const renderers = {
+    code({ inline, className, children }: any) {
+      const language = className?.replace('language-', '') || 'plaintext';
+      return inline ? (
+        <code className="inline-code">{children}</code>
+      ) : (
+        <div className="relative group">
+          <button
+            onClick={() => copyToClipboard(children)}
+            className="absolute top-1 right-1 p-1 text-sm opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded shadow">
+            <ClipboardIcon size={16} />
+          </button>
+          <SyntaxHighlighter
+            language={language}
+            style={vscDarkPlus}>
+            {String(children).trim()}
+          </SyntaxHighlighter>
+        </div>
+      );
+    },
   };
 
   const handleNewMessage = async () => {
-    if ((!newMessage.trim()) || isLoading) return;
+    if (!newMessage.trim() || isLoading) return;
 
     const userMessage = newMessage;
-  
 
     setMessages((prevMessages) => [
       ...prevMessages,
@@ -149,7 +168,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     setError(null);
 
     try {
-      const aiResponse = await sendMessage(selectedChatId, messageContent, selectedModel, selectedTemperature);
+      const aiResponse = await sendMessage(
+        selectedChatId,
+        messageContent,
+        selectedModel,
+        selectedTemperature
+      );
       setMessages((prevMessages) => [
         ...prevMessages,
         { sender: 'ai', content: aiResponse },
@@ -162,41 +186,50 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-const regenerateResponse = async () => {
-  // Find the last user message and AI response
-  setIsLoading(true);
-  const lastAiMessage = messages.slice().reverse().find((msg) => msg.sender === 'ai');
+  const regenerateResponse = async () => {
+    // Find the last user message and AI response
+    setIsLoading(true);
+    const lastAiMessage = messages
+      .slice()
+      .reverse()
+      .find((msg) => msg.sender === 'ai');
 
-  if (lastAiMessage) {
-    try {
-      // Call regenerate endpoint and handle response without triggering generate_response
-      const regenerateResponse = await axios.post(
-        `http://localhost:8000/api/regenerate-message/${selectedChatId}/`,
-        {},
-        {
-          headers: { 'X-CSRFToken': getCsrfToken() },
-          withCredentials: true,
+    if (lastAiMessage) {
+      try {
+        // Call regenerate endpoint and handle response without triggering generate_response
+        const regenerateResponse = await axios.post(
+          `http://localhost:8000/api/regenerate-message/${selectedChatId}/`,
+          {},
+          {
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            withCredentials: true,
+          }
+        );
+
+        if (
+          regenerateResponse.status === 200 &&
+          regenerateResponse.data.content
+        ) {
+          // Update messages without adding the last user message or triggering generate_response
+          setMessages((prevMessages) => [
+            ...prevMessages.filter((msg) => msg !== lastAiMessage), // Remove last AI message only
+            { sender: 'ai', content: regenerateResponse.data.content },
+          ]);
         }
-      );
-
-      if (regenerateResponse.status === 200 && regenerateResponse.data.content) {
-        // Update messages without adding the last user message or triggering generate_response
+      } catch (error) {
+        console.error('Error regenerating message:', error);
         setMessages((prevMessages) => [
-          ...prevMessages.filter((msg) => msg !== lastAiMessage), // Remove last AI message only
-          { sender: 'ai', content: regenerateResponse.data.content },
+          ...prevMessages,
+          {
+            sender: 'ai',
+            content: 'Error regenerating the response, please try again.',
+          },
         ]);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error regenerating message:', error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { sender: 'ai', content: "Error regenerating the response, please try again." },
-      ]);
-    } finally {
-      setIsLoading(false);
     }
-  }
-};
+  };
 
   const handleInput = () => {
     const textarea = textareaRef.current;
@@ -208,7 +241,7 @@ const regenerateResponse = async () => {
 
   return (
     <div className="flex-grow flex flex-col p-4 h-full">
-      <div className="flex-grow overflow-y-scroll mb-4 max-h-[calc(100vh-190px)]">
+      <div className="flex-grow overflow-y-auto mb-4 max-h-[calc(100vh-190px)]">
         {messages.length === 0 && !isLoading && selectedChatId && (
           <div className="grid gap-4">
             <div className="grid grid-cols-1 gap-4 mb-4">
@@ -241,14 +274,16 @@ const regenerateResponse = async () => {
                 }`}>
                 {isAi ? (
                   <div className="max-w-[80%] p-4 text-wrap">
-                    <div className="pb-1 flex items-center">
+                    <div className="pb-1 flex">
                       <Sparkles
                         size={28}
                         className="flex-shrink-0 pr-2"
                         color="#141E8C"
                       />
                       <div className="text-card-foreground">
-                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                        <ReactMarkdown components={renderers}>
+                          {message.content}
+                        </ReactMarkdown>
                       </div>
                     </div>
                     <div className="flex justify-end">

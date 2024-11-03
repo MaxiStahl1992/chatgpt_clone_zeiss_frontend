@@ -44,7 +44,6 @@ const WeatherCard: React.FC = () => {
           params: { latitude: lat, longitude: lon },
           withCredentials: true,
         });
-        console.log(response)
         setWeatherData(response.data);
       } catch (err) {
         console.error('Error fetching weather data:', err);
