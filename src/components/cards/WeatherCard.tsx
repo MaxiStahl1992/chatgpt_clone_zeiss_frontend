@@ -4,6 +4,27 @@ import { ArrowRightCircle, Cloud, CloudRain, Sun, Wind } from 'lucide-react';
 import { format } from 'date-fns';
 import LoadingDots from '../utils/LoadingDots';
 
+/**
+ * WeatherCard component for displaying real-time weather data based on the user's location.
+ * Automatically fetches the user’s geolocation and corresponding weather details.
+ * 
+ * State:
+ * - `latitude` and `longitude`: Coordinates used for fetching weather data.
+ * - `locationName`: Name of the location derived from the coordinates.
+ * - `weatherData`: Object containing temperature, weather code, wind speed, and direction.
+ * - `loading`: Boolean indicating if the weather data is loading.
+ * - `error`: Error message displayed if weather data or location retrieval fails.
+ * 
+ * Methods:
+ * - `fetchLocationAndWeather`: Uses browser geolocation to get coordinates and fetch weather.
+ * - `fetchWeather`: Fetches weather details for given latitude and longitude.
+ * - `reverseGeocode`: Determines the location name from latitude and longitude.
+ * - `getWeatherIcon`: Returns the appropriate icon based on weather code.
+ * - `getWindDirection`: Maps wind direction in degrees to compass direction (e.g., N, NE).
+ * 
+ * useEffect:
+ * - Triggers `fetchLocationAndWeather` to retrieve weather data when the component mounts.
+ */
 const WeatherCard: React.FC = () => {
   const [latitude, setLatitude] = useState<string>('48.1351');
   const [longitude, setLongitude] = useState<string>('11.5820');
@@ -13,7 +34,6 @@ const WeatherCard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch location from the browser
     const fetchLocationAndWeather = () => {
       if (!navigator.geolocation) {
         setError('Geolocation is not supported by your browser');

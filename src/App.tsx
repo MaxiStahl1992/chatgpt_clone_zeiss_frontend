@@ -1,4 +1,3 @@
-// src/App.tsx
 import { useInitializeApp } from '@/hooks/useInitializeApp';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import './App.css';
@@ -9,6 +8,26 @@ import LoadingDots from './components/utils/LoadingDots';
 import { createChat, deleteChat } from './services/chatService';
 import { useCallback } from 'react';
 
+/**
+ * The main application component that sets up global state, authentication, 
+ * and layout for the chat application. Initializes app settings, manages 
+ * selected chat, model, and temperature, and controls chat creation and deletion.
+ * 
+ * - `useInitializeApp()`: Custom hook to initialize app state, including authentication, chat list, and settings.
+ * - `useAuthRedirect`: Redirects to login if the user is not authenticated.
+ * - `handleNewChat`: Initiates a new chat session, adds it to the chat list, and sets it as active.
+ * - `handleDeleteChat`: Deletes a specified chat, updates the chat list, and reselects a new chat if necessary.
+ * 
+ * `useEffect`:
+ * - Redirects user if they are not authenticated using `useAuthRedirect`.
+ * 
+ * `useState` variables managed in `useInitializeApp`:
+ * - `isAuthenticated`: Tracks user authentication status.
+ * - `chats`: Stores available chat sessions.
+ * - `selectedChatId`: Tracks the currently selected chat session.
+ * - `selectedModel`: The AI model used for responses.
+ * - `selectedTemperature`: Temperature setting for the AI model responses.
+ */
 function App() {
   const {
     isAuthenticated,

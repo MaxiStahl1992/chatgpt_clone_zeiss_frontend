@@ -1,6 +1,11 @@
 import axios from "axios";
-import { getCsrfToken } from "@/lib/utils";
 
+/**
+ * Weather Service
+ * 
+ * - `fetchWeather`: Retrieves weather data based on latitude and longitude.
+ *   Returns weather information or `null` if the request fails.
+ */
 export const fetchWeather = async (lat: string, lon: string) => {
     try {
         const response = await axios.get("http://localhost:8000/api/get-weather/", {

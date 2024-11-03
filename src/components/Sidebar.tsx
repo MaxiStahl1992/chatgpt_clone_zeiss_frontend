@@ -9,6 +9,20 @@ type SidebarProps = {
   deleteChat: (chatId: string) => void;
 };
 
+/**
+ * Sidebar component for navigating between chat sessions.
+ * Displays a list of chats and allows selection or deletion of a chat.
+ * 
+ * Props:
+ * - `chats`: Array of chat objects containing chat ID and title.
+ * - `selectedChatId`: ID of the currently selected chat.
+ * - `setSelectedChatId`: Callback to update the selected chat.
+ * - `deleteChat`: Callback to delete a specific chat.
+ * 
+ * Methods:
+ * - Renders each chat with a clickable title and a delete icon (TrashIcon).
+ * - Calls `deleteChat` when the delete icon is clicked.
+ */
 const Sidebar: React.FC<SidebarProps> = ({
   chats,
   selectedChatId,

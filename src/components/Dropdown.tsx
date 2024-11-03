@@ -8,6 +8,27 @@ type DropdownProps = {
   icon?: React.ReactNode;
 };
 
+
+/**
+ * Dropdown component for selecting options such as model or temperature.
+ * 
+ * Props:
+ * - `options`: Array of options to display in the dropdown.
+ * - `selected`: Currently selected option.
+ * - `onSelect`: Callback function for handling option selection.
+ * - `iconOnly`: If true, displays only the icon (useful for compact UI).
+ * - `icon`: Custom icon to display when `iconOnly` is true.
+ * 
+ * State:
+ * - `isOpen`: Controls visibility of the dropdown menu.
+ * 
+ * Methods:
+ * - `toggleDropdown`: Toggles the visibility of the dropdown menu.
+ * - `handleOptionSelect`: Selects an option and closes the menu.
+ * 
+ * useEffect:
+ * - Listens for clicks outside the dropdown to close it when open.
+ */
 const Dropdown: React.FC<DropdownProps> = ({
   options,
   selected,

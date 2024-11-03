@@ -1,4 +1,3 @@
-// src/components/MessageList.tsx
 import React, { useRef, useEffect } from 'react';
 import { ClipboardIcon, RefreshCcw, Sparkles } from 'lucide-react';
 import ReactMarkdown, { Components } from 'react-markdown';
@@ -15,6 +14,27 @@ type MessageListProps = {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 };
 
+/**
+ * MessageList component for displaying a list of chat messages between the user and AI.
+ * Supports regenerating the AI response and copying message content to clipboard.
+ * 
+ * Props:
+ * - `messages`: Array of chat messages to display.
+ * - `isLoading`: Boolean indicating if an AI response is being generated.
+ * - `setIsLoading`: Function to update loading state.
+ * - `selectedChatId`: ID of the current chat session.
+ * - `setMessages`: Function to update the messages in the chat session.
+ * 
+ * State:
+ * - Uses a `useRef` (messageEndRef) to keep the view scrolled to the latest message.
+ * 
+ * Methods:
+ * - `regenerateResponse`: Regenerates the last AI message for the current chat.
+ * - `copyToClipboard`: Copies a message’s content to the clipboard.
+ * 
+ * useEffect:
+ * - Scrolls to the latest message whenever `messages` or `isLoading` changes.
+ */
 const MessageList: React.FC<MessageListProps> = ({
   messages,
   isLoading,

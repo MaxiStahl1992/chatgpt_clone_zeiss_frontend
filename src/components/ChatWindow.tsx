@@ -14,6 +14,23 @@ type ChatWindowProps = {
   handleNewChat: (initialMessage?: string) => Promise<string | undefined>;
 };
 
+/**
+ * ChatWindow component that manages the main chat interface, displaying messages,
+ * allowing users to send new messages, and handling interactions with predefined prompts.
+ * 
+ * - `handleSendMessage`: Sends a user's message and retrieves the AI response.
+ * - `handlePromptClick`: Sends a predefined prompt as a message or starts a new chat session if none is selected.
+ * - `handleNewMessage`: Submits the current user input as a message.
+ * - `handleInput`: Adjusts the height of the text area dynamically as the user types.
+ * 
+ * `useEffect`:
+ * - Loads chat history for the selected chat session whenever `selectedChatId` changes.
+ * 
+ * `useState` variables:
+ * - `messages`: Stores the current list of messages in the chat.
+ * - `newMessage`: Tracks the user's current input in the text area.
+ * - `isLoading`: Indicates if a message is being sent or an AI response is loading.
+ */
 const ChatWindow: React.FC<ChatWindowProps> = ({
   selectedModel,
   selectedTemperature,
@@ -39,7 +56,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const handleSendMessage = useCallback(
     async (content: string) => {
       setIsLoading(true);
-      setMessages((prevMessages) => [...prevMessages, { sender: 'user', content }]);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { sender: 'user', content },
+      ]);
 
       try {
         const aiResponse = await sendMessage(
@@ -48,7 +68,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           selectedModel,
           selectedTemperature
         );
-        setMessages((prevMessages) => [...prevMessages, { sender: 'ai', content: aiResponse }]);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { sender: 'ai', content: aiResponse },
+        ]);
       } catch (error) {
         console.error('Error sending message:', error);
       } finally {
@@ -61,11 +84,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const handlePromptClick = async (description: string) => {
     if (selectedChatId) {
       await handleSendMessage(description);
-    } else {
-      const newChatId = await handleNewChat(description);
-      if (newChatId) {
-        // Messages will be loaded in useEffect when selectedChatId changes
-      }
     }
   };
 
@@ -138,9 +156,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               onClick={handleNewMessage}
               disabled={isLoading}
               className={`absolute right-3 bottom-4 p-2 rounded-full outline-none active:scale-95 transition-transform duration-75 ${
-                isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary text-white'
-              }`}
-            >
+                isLoading
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-primary text-white'
+              }`}>
               <Send size={24} />
             </button>
           </>
@@ -148,8 +167,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           <div className="flex justify-center w-full">
             <button
               className="bg-primary text-primary-foreground outline-none focus:outline-none active:scale-95 transition-transform duration-75"
-              onClick={() => handleNewChat()}
-            >
+              onClick={() => handleNewChat()}>
               Start new chat
             </button>
           </div>

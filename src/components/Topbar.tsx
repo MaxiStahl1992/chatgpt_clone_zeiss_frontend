@@ -1,4 +1,3 @@
-// src/components/Topbar.tsx
 import React from 'react';
 import { MessageSquarePlus, ThermometerIcon } from 'lucide-react';
 import Dropdown from './Dropdown';
@@ -13,6 +12,23 @@ type TopbarProps = {
   handleNewChat: () => void;
 };
 
+
+/**
+ * Topbar component for managing chat settings and creating new chat sessions.
+ * Includes dropdowns for selecting AI model and temperature, and a button to start a new chat.
+ * 
+ * Props:
+ * - `selectedModel`: Currently selected AI model.
+ * - `selectedTemperature`: Currently selected temperature setting.
+ * - `setSelectedModel`: Callback to update the selected model.
+ * - `setSelectedTemperature`: Callback to update the selected temperature.
+ * - `handleNewChat`: Callback to initiate a new chat session.
+ * 
+ * State:
+ * - `availableModels`: Array of available AI models fetched via `useFetchOptions`.
+ * - `availableTemperatures`: Array of available temperature settings.
+ * - `isLoading`: Loading state for options data, displaying a loading indicator when true.
+ */
 const Topbar: React.FC<TopbarProps> = ({
   selectedModel,
   selectedTemperature,

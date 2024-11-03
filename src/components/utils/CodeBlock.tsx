@@ -1,4 +1,3 @@
-// src/components/utils/CodeBlock.tsx
 import React from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -10,6 +9,21 @@ interface CodeBlockProps {
   children: React.ReactNode;
 }
 
+/**
+ * CodeBlock component for rendering code snippets with syntax highlighting and a copy-to-clipboard option.
+ * 
+ * Props:
+ * - `inline`: Determines if the code should be displayed inline or in a block format.
+ * - `className`: Optional class name to specify the language for syntax highlighting.
+ * - `children`: The code content to be displayed.
+ * 
+ * Methods:
+ * - `copyToClipboard`: Copies the code content to the clipboard when the copy button is clicked.
+ * 
+ * Features:
+ * - Uses `react-syntax-highlighter` with `vscDarkPlus` theme for syntax highlighting.
+ * - Displays a clipboard icon for copying code, which becomes visible on hover.
+ */
 const CodeBlock: React.FC<CodeBlockProps> = ({ inline, className, children }) => {
   const language = className?.replace('language-', '') || 'plaintext';
 

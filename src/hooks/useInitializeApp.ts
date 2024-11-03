@@ -2,6 +2,20 @@ import { useState, useEffect } from 'react';
 import { checkAuthentication } from '../services/authService';
 import { fetchChats, Chat } from '../services/chatService';
 
+/**
+ * Custom hook to initialize the app by checking authentication and fetching chat sessions.
+ * Sets the initial application state for authentication, chats, and default chat selection.
+ * 
+ * State:
+ * - `isAuthenticated`: Tracks if the user is logged in (boolean or null).
+ * - `chats`: Array of available chat sessions.
+ * - `selectedChatId`: ID of the initially selected chat session.
+ * - `selectedModel`: The AI model selected by default.
+ * - `selectedTemperature`: The temperature setting selected by default.
+ * 
+ * useEffect:
+ * - Calls an initialization function to check authentication and fetch chats when the app loads.
+ */
 export const useInitializeApp = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);

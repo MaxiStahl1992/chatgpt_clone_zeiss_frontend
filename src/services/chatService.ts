@@ -1,6 +1,21 @@
 import axios from 'axios';
 import { getCsrfToken } from '@/lib/utils';
 
+/**
+ * Chat Service
+ * 
+ * Types:
+ * - `Chat`: Represents a chat object with ID and title.
+ * - `Message`: Represents a message object with sender type, content, and optional chat ID.
+ * 
+ * Functions:
+ * - `fetchChats`: Retrieves all chat sessions for the authenticated user.
+ * - `createChat`: Creates a new chat session and returns its unique ID.
+ * - `sendMessage`: Sends a message within a specified chat session, returns the AI response.
+ * - `fetchChatHistory`: Fetches the message history for a specific chat session.
+ * - `deleteChat`: Deletes a specified chat session by ID.
+ */
+
 export type Chat = {
   chatId: string;
   chatTitle: string;

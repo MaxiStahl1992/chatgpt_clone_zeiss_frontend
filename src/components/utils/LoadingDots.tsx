@@ -1,5 +1,11 @@
 import React from 'react';
 
+/**
+ * LoadingDots component that displays an animated set of dots to indicate loading state.
+ * 
+ * Styling:
+ * - Each dot is animated with a bounce effect and a slight delay to create a sequential animation.
+ */
 const LoadingDots: React.FC = () => {
   return (
     <div className="ml-2 flex space-x-1">

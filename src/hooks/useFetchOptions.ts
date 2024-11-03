@@ -1,7 +1,22 @@
-// src/hooks/useFetchOptions.ts
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+/**
+ * Custom hook to fetch available models and temperature options from the API.
+ * Sets the initial model and temperature for the chat settings.
+ * 
+ * Parameters:
+ * - `setSelectedModel`: Callback to set the initially selected model.
+ * - `setSelectedTemperature`: Callback to set the initially selected temperature.
+ * 
+ * State:
+ * - `availableModels`: Array of available AI models.
+ * - `availableTemperatures`: Array of temperature options.
+ * - `isLoading`: Boolean indicating if the options are being loaded.
+ * 
+ * useEffect:
+ * - Fetches model and temperature options when the component mounts.
+ */
 export const useFetchOptions = (
   setSelectedModel: (model: string) => void,
   setSelectedTemperature: (temperature: string) => void
