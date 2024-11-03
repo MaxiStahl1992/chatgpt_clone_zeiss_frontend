@@ -68,16 +68,35 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const handlePromptClick = async (description: string) => {
     if (selectedChatId) {
       // Add prompt to the chat and send it
-      setMessages((prevMessages) => [...prevMessages, { sender: 'user', content: description }]);
-      const aiResponse = await sendMessage(selectedChatId, description, selectedModel, selectedTemperature);
-      setMessages((prevMessages) => [...prevMessages, { sender: 'ai', content: aiResponse }]);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { sender: 'user', content: description },
+      ]);
+      const aiResponse = await sendMessage(
+        selectedChatId,
+        description,
+        selectedModel,
+        selectedTemperature
+      );
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { sender: 'ai', content: aiResponse },
+      ]);
     } else {
       // Create new chat if no chat session exists
       const newChatId = await handleNewChat(description);
       if (newChatId) {
         setMessages([{ sender: 'user', content: description }]);
-        const aiResponse = await sendMessage(newChatId, description, selectedModel, selectedTemperature);
-        setMessages((prevMessages) => [...prevMessages, { sender: 'ai', content: aiResponse }]);
+        const aiResponse = await sendMessage(
+          newChatId,
+          description,
+          selectedModel,
+          selectedTemperature
+        );
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { sender: 'ai', content: aiResponse },
+        ]);
       }
     }
   };
@@ -104,42 +123,46 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         selectedModel,
         selectedTemperature
       );
-      setMessages((prevMessages) => [...prevMessages, { sender: 'ai', content: aiResponse }]);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { sender: 'ai', content: aiResponse },
+      ]);
     } catch (error) {
       console.error('Error sending message:', error);
       setMessages((prevMessages) => [
         ...prevMessages,
         {
           sender: 'ai',
-          content: "I'm sorry, something went wrong while fetching the response.",
+          content:
+            "I'm sorry, something went wrong while fetching the response.",
         },
       ]);
-      setError("There was an error generating the response. Please try again.");
+      setError('There was an error generating the response. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const sendMessageHandler = async (lastUserMessage?: string) => {
-    if (!newMessage.trim() && !lastUserMessage || isLoading) return;
+    if ((!newMessage.trim() && !lastUserMessage) || isLoading) return;
 
     let userMessage = newMessage;
-    if(lastUserMessage) {
+    if (lastUserMessage) {
       userMessage = lastUserMessage;
-    } 
+    }
 
-    console.log('Messages:', messages);
-
-    setMessages((prevMessages) => [...prevMessages, { sender: 'user', content: userMessage }]);
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { sender: 'user', content: userMessage },
+    ]);
     setNewMessage('');
     await fetchAIResponse(userMessage);
   };
 
   const regenerateResponse = async () => {
-    console.log('Regenerating response...');
-
-    const lastUserMessage = messages.reverse().find((msg) => msg.sender === 'user');
-    console.log('Last message:', lastUserMessage);
+    const lastUserMessage = messages
+      .reverse()
+      .find((msg) => msg.sender === 'user');
 
     try {
       console.log('Sending last user message:', lastUserMessage?.content);
@@ -149,7 +172,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       setIsLoading(false);
     }
   };
-  
+
   const handleInput = () => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -203,19 +226,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                         <ReactMarkdown>{message.content}</ReactMarkdown>
                       </div>
                     </div>
-                    <div className='flex justify-end'>
+                    <div className="flex justify-end">
                       <ClipboardIcon
                         size={12}
                         className=" text-gray-500 hover:text-blue-500 cursor-pointer"
                         onClick={() => copyToClipboard(message.content)}
                       />
-                        {index === messages.length - 1 && (
-                        <RefreshCcw 
+                      {index === messages.length - 1 && (
+                        <RefreshCcw
                           size={12}
                           className=" text-gray-500 hover:text-blue-500 cursor-pointer"
                           onClick={regenerateResponse}
                         />
-                        )}
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -237,9 +260,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onInput={handleInput}
-              onKeyDown={(e) =>
-                e.key === 'Enter' && !e.shiftKey && sendMessageHandler()
-              }
+              onKeyDown={(e) => {
+                e.key === 'Enter' && !e.shiftKey && e.preventDefault();
+                e.key === 'Enter' && !e.shiftKey && sendMessageHandler();
+              }}
               className="w-full bg-background shadow-lg rounded-3xl max-h-[20vh] overflow-y-auto resize-none border p-4 pr-[65px] outline-none"
               style={{
                 height: 'auto',

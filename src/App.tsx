@@ -4,7 +4,7 @@ import ChatWindow from './components/ChatWindow';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import LoadingDots from './components/utils/LoadingDots';
-import { createChat, deleteChat, fetchChats } from './services/chatService';
+import { Chat, createChat, deleteChat, fetchChats } from './services/chatService';
 import { checkAuthentication } from './services/authService';
 
 
@@ -14,16 +14,6 @@ function App() {
   const [selectedTemperature, setSelectedTemperature] = useState<string>('');
   const [selectedChatId, setSelectedChatId] = useState<string>('');
   const [chats, setChats] = useState<Chat[]>([]);
-
-  // useEffect to check if the user is authenticated
-
-  // useEffect to fetch chats
-
-  // handleNewChat function
-
-  // sendPrompt function
-
-  // deleteChat function
 
   useEffect(() => {
     const initialize = async () => {
