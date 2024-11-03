@@ -84,7 +84,7 @@ const Topbar: React.FC<TopbarProps> = ({
           }></Dropdown>
         <button
           className="bg-transparent outline-none hover:outline hover:outline-primary focus:outline focus:outline-2 focus:outline-primary border-none active:scale-95 trainsition-transform duration-75"
-          onClick={handleNewChat}
+          onClick={() => handleNewChat()}
           onMouseUp={(e) => e.currentTarget.blur()}>
           <MessageSquarePlus
             size={24}

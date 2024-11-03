@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import './App.css';
 import ChatWindow from './components/ChatWindow';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import LoadingDots from './components/utils/LoadingDots';
-import { getCsrfToken } from './lib/utils';
+import { createChat, deleteChat, fetchChats } from './services/chatService';
+import { checkAuthentication } from './services/authService';
 
-export type Chat = {
-  chatId: string;
-  chatTitle: string;
-};
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -19,85 +15,48 @@ function App() {
   const [selectedChatId, setSelectedChatId] = useState<string>('');
   const [chats, setChats] = useState<Chat[]>([]);
 
-  useEffect(() => {
-    const checkAuthentication = async () => {
-      try {
-        const response = await axios.get(
-          'http://localhost:8000/api/check-authentication/',
-          {
-            withCredentials: true,
-          }
-        );
-        setIsAuthenticated(response.data.isAuthenticated);
-      } catch (error) {
-        console.error('Authentication check failed:', error);
-        setIsAuthenticated(false);
-      }
-    };
+  // useEffect to check if the user is authenticated
 
-    axios.get('http://localhost:8000/api/set-csrf-token/', {
-      withCredentials: true,
-    });
+  // useEffect to fetch chats
 
-    checkAuthentication();
-  }, []);
+  // handleNewChat function
+
+  // sendPrompt function
+
+  // deleteChat function
 
   useEffect(() => {
-    const fetchChats = async () => {
+    const initialize = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/chats/', {
-          withCredentials: true,
-        });
-        setChats(response.data.chats);
-        if (response.data.chats.length > 0) {
-          setSelectedChatId(response.data.chats[0].chat_id);
+        const authenticated = await checkAuthentication();
+        setIsAuthenticated(authenticated);
+        const chatsData = await fetchChats();
+        setChats(chatsData);
+        if (chatsData.length > 0) {
+          setSelectedChatId(chatsData[0].chatId);
         }
       } catch (error) {
-        console.error('Error fetching chats:', error);
+        console.error('Initialization failed:', error);
       }
     };
-    fetchChats();
+    initialize();
   }, []);
 
   const handleNewChat = async () => {
     try {
-      const csrfToken = getCsrfToken();
-      const response = await axios.post(
-        'http://localhost:8000/api/create-chat/',
-        {},
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(csrfToken && { 'X-CSRFToken': csrfToken }),
-          },
-          withCredentials: true,
-        }
-      );
-      const newChatId = response.data.chat_id;
-      setChats((prev) => [...prev, newChatId]);
+      const newChatId = await createChat();
+      setChats((prev) => [...prev, { chatId: newChatId, chatTitle: 'New Chat' }]);
       setSelectedChatId(newChatId);
+      return newChatId;
     } catch (error) {
       console.error('Error creating new chat:', error);
     }
   };
 
-  const deleteChat = async (chatId: string) => {
+  const handleDeleteChat = async (chatId: string) => {
     try {
-      const csrfToken = getCsrfToken();
-      await axios.post(
-        `http://localhost:8000/api/delete-chat/${chatId}/`,
-        {},
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(csrfToken && { 'X-CSRFToken': csrfToken }),
-          },
-          withCredentials: true,
-        }
-      );
-
+      await deleteChat(chatId);
       setChats((prev) => prev.filter((chat) => chat.chatId !== chatId));
-
       if (selectedChatId === chatId) {
         const newSelectedChat = chats.find((chat) => chat.chatId !== chatId);
         setSelectedChatId(newSelectedChat ? newSelectedChat.chatId : '');
@@ -122,7 +81,7 @@ function App() {
         chats={chats}
         selectedChatId={selectedChatId}
         setSelectedChatId={setSelectedChatId}
-        deleteChat={deleteChat}
+        deleteChat={handleDeleteChat}
       />
       <div className="flex flex-col flex-grow max-h-full">
         <Topbar

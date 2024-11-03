@@ -3,10 +3,11 @@ import WeatherCard from './cards/WeatherCard';
 import StockCard from './cards//StockCard';
 import PromptCard, { PromptCardProps } from './cards/PromptCard';
 import LoadingDots from './utils/LoadingDots';
-import { ClipboardIcon, Send, Sparkles } from 'lucide-react';
+import { ClipboardIcon, RefreshCcw, Send, Sparkles } from 'lucide-react';
 import { getCsrfToken } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
+import { fetchChatHistory, Message, sendMessage } from '@/services/chatService';
 
 const examplePrompts: PromptCardProps[] = [
   {
@@ -26,17 +27,11 @@ const examplePrompts: PromptCardProps[] = [
   },
 ];
 
-type Message = {
-  sender: 'user' | 'ai';
-  content: string;
-  chatId?: string;
-};
-
 type ChatWindowProps = {
   selectedModel: string;
   selectedTemperature: string;
   selectedChatId: string;
-  handleNewChat: () => void;
+  handleNewChat: (initialMessage?: string) => Promise<string | undefined>;
 };
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -48,24 +43,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageStartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (selectedChatId) {
-      console.log(selectedChatId);
-      const fetchChatHistory = async () => {
-        try {
-          const response = await axios.get(
-            `http://localhost:8000/api/chat-history/${selectedChatId}/`,
-            { withCredentials: true }
-          );
-          setMessages(response.data.messages);
-        } catch (error) {
-          console.error('Error fetching chat history:', error);
-        }
+      const loadChatHistory = async () => {
+        const chatHistory = await fetchChatHistory(selectedChatId);
+        setMessages(chatHistory);
       };
-      fetchChatHistory();
+      loadChatHistory();
     }
   }, [selectedChatId]);
 
@@ -76,6 +64,23 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handlePromptClick = async (description: string) => {
+    if (selectedChatId) {
+      // Add prompt to the chat and send it
+      setMessages((prevMessages) => [...prevMessages, { sender: 'user', content: description }]);
+      const aiResponse = await sendMessage(selectedChatId, description, selectedModel, selectedTemperature);
+      setMessages((prevMessages) => [...prevMessages, { sender: 'ai', content: aiResponse }]);
+    } else {
+      // Create new chat if no chat session exists
+      const newChatId = await handleNewChat(description);
+      if (newChatId) {
+        setMessages([{ sender: 'user', content: description }]);
+        const aiResponse = await sendMessage(newChatId, description, selectedModel, selectedTemperature);
+        setMessages((prevMessages) => [...prevMessages, { sender: 'ai', content: aiResponse }]);
+      }
+    }
+  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard
@@ -88,63 +93,63 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       });
   };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || isLoading) return;
-
-    // Add user's message to state
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { sender: 'user', content: newMessage },
-    ]);
-    setNewMessage('');
+  const fetchAIResponse = async (userMessage: string) => {
     setIsLoading(true);
+    setError(null);
 
     try {
-      const csrfToken = getCsrfToken();
-
-      const response = await axios.post(
-        'http://localhost:8000/api/generate-response/',
-        {
-          chat_id: selectedChatId,
-          message: newMessage,
-          model: selectedModel,
-          temperature: selectedTemperature,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(csrfToken && { 'X-CSRFToken': csrfToken }),
-          },
-          withCredentials: true,
-        }
+      const aiResponse = await sendMessage(
+        selectedChatId as string,
+        userMessage,
+        selectedModel,
+        selectedTemperature
       );
-
-      if (response.status !== 200) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.data;
-
-      // Append AI's response to messages
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { sender: 'ai', content: data.content},
-      ]);
+      setMessages((prevMessages) => [...prevMessages, { sender: 'ai', content: aiResponse }]);
     } catch (error) {
       console.error('Error sending message:', error);
       setMessages((prevMessages) => [
         ...prevMessages,
         {
           sender: 'ai',
-          content:
-            "I'm sorry, something went wrong while fetching the response.",
+          content: "I'm sorry, something went wrong while fetching the response.",
         },
       ]);
+      setError("There was an error generating the response. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const sendMessageHandler = async (lastUserMessage?: string) => {
+    if (!newMessage.trim() && !lastUserMessage || isLoading) return;
+
+    let userMessage = newMessage;
+    if(lastUserMessage) {
+      userMessage = lastUserMessage;
+    } 
+
+    console.log('Messages:', messages);
+
+    setMessages((prevMessages) => [...prevMessages, { sender: 'user', content: userMessage }]);
+    setNewMessage('');
+    await fetchAIResponse(userMessage);
+  };
+
+  const regenerateResponse = async () => {
+    console.log('Regenerating response...');
+
+    const lastUserMessage = messages.reverse().find((msg) => msg.sender === 'user');
+    console.log('Last message:', lastUserMessage);
+
+    try {
+      console.log('Sending last user message:', lastUserMessage?.content);
+      setIsLoading(true);
+      sendMessageHandler(lastUserMessage?.content);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const handleInput = () => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -153,15 +158,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  // Render messages if any exist
   return (
     <div className="flex-grow flex flex-col p-4 h-full">
       <div className="flex-grow overflow-y-scroll mb-4 max-h-[calc(100vh-190px)]">
-        {messages.length === 0 && !isLoading && (
+        {messages.length === 0 && !isLoading && selectedChatId && (
           <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 gap-4 mb-4">
               <WeatherCard />
-              <StockCard />
             </div>
 
             <div className="grid grid-cols-3 gap-4">
@@ -170,6 +173,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                   key={index}
                   title={examplePrompt.title}
                   description={examplePrompt.description}
+                  onClick={() => handlePromptClick(examplePrompt.description)}
                 />
               ))}
             </div>
@@ -188,16 +192,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                   isAi ? 'justify-start' : 'justify-end'
                 }`}>
                 {isAi ? (
-                  <div className="max-w-[80%] p-4">
+                  <div className="max-w-[80%] p-4 text-wrap">
                     <div className="pb-1 flex items-center">
                       <Sparkles
                         size={28}
                         className="flex-shrink-0 pr-2"
                         color="#141E8C"
                       />
-                      <p className="text-card-foreground">
+                      <div className="text-card-foreground">
                         <ReactMarkdown>{message.content}</ReactMarkdown>
-                      </p>
+                      </div>
                     </div>
                     <div className='flex justify-end'>
                       <ClipboardIcon
@@ -205,6 +209,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                         className=" text-gray-500 hover:text-blue-500 cursor-pointer"
                         onClick={() => copyToClipboard(message.content)}
                       />
+                        {index === messages.length - 1 && (
+                        <RefreshCcw 
+                          size={12}
+                          className=" text-gray-500 hover:text-blue-500 cursor-pointer"
+                          onClick={regenerateResponse}
+                        />
+                        )}
                     </div>
                   </div>
                 ) : (
@@ -227,7 +238,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               onChange={(e) => setNewMessage(e.target.value)}
               onInput={handleInput}
               onKeyDown={(e) =>
-                e.key === 'Enter' && !e.shiftKey && sendMessage()
+                e.key === 'Enter' && !e.shiftKey && sendMessageHandler()
               }
               className="w-full bg-background shadow-lg rounded-3xl max-h-[20vh] overflow-y-auto resize-none border p-4 pr-[65px] outline-none"
               style={{
@@ -239,7 +250,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               placeholder="Ask me something..."
             />
             <button
-              onClick={sendMessage}
+              onClick={() => sendMessageHandler()}
               disabled={isLoading}
               className={`absolute right-3 bottom-4 p-2 rounded-full outline-none active:scale-95 active:outline-none transition-transform duration-75 ${
                 isLoading
@@ -257,7 +268,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           <div className="flex justify-center w-full">
             <button
               className="bg-primary text-primary-foreground outline-none focus:outline-none active:scale-95 trainsition-transform duration-75"
-              onClick={handleNewChat}>
+              onClick={() => handleNewChat('')}>
               Start new chat
             </button>
           </div>
