@@ -1,6 +1,6 @@
 import React from 'react';
-import { Chat } from '../App';
 import { TrashIcon } from 'lucide-react';
+import { Chat } from '@/services/chatService';
 
 type SidebarProps = {
   chats: Chat[];

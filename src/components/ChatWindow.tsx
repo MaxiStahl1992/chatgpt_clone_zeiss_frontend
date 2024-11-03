@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
 import WeatherCard from './cards/WeatherCard';
-import StockCard from './cards//StockCard';
 import PromptCard, { PromptCardProps } from './cards/PromptCard';
 import LoadingDots from './utils/LoadingDots';
 import { ClipboardIcon, RefreshCcw, Send, Sparkles } from 'lucide-react';
@@ -8,6 +7,7 @@ import { getCsrfToken } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 import { fetchChatHistory, Message, sendMessage } from '@/services/chatService';
+import { set } from 'date-fns';
 
 const examplePrompts: PromptCardProps[] = [
   {
@@ -16,14 +16,14 @@ const examplePrompts: PromptCardProps[] = [
       'Max is a skilled software engineer with experience in full-stack development. He is passionate about building products that make a positive impact on the world.',
   },
   {
+    title: 'Tell me something interesting about Max!',
+    description:
+      'Max is a huge fan of Lord of the Rings and watches every movie at least once a year.',
+  },
+  {
     title: "What are Max's strengths?",
     description:
       'Max is a quick learner, a great communicator, and a team player. He likes AI and programming in Python and Javascript.',
-  },
-  {
-    title: 'Tell me something interesting about Max',
-    description:
-      'Max is a huge fan of Lord of the Rings and watches every movie at least once a year.',
   },
 ];
 
@@ -44,6 +44,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [newMessage, setNewMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageStartRef = useRef<HTMLDivElement>(null);
 
@@ -67,28 +68,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const handlePromptClick = async (description: string) => {
     if (selectedChatId) {
-      // Add prompt to the chat and send it
+      setIsLoading(true);
       setMessages((prevMessages) => [
         ...prevMessages,
         { sender: 'user', content: description },
       ]);
-      const aiResponse = await sendMessage(
-        selectedChatId,
-        description,
-        selectedModel,
-        selectedTemperature
-      );
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { sender: 'ai', content: aiResponse },
-      ]);
-    } else {
-      // Create new chat if no chat session exists
-      const newChatId = await handleNewChat(description);
-      if (newChatId) {
-        setMessages([{ sender: 'user', content: description }]);
+
+      try {
         const aiResponse = await sendMessage(
-          newChatId,
+          selectedChatId,
           description,
           selectedModel,
           selectedTemperature
@@ -97,6 +85,36 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           ...prevMessages,
           { sender: 'ai', content: aiResponse },
         ]);
+      } catch (error) {
+        console.error('Error fetching AI response:', error);
+      } finally {
+        setIsLoading(false); // Hide loading dots after response is received
+      }
+    } else {
+      const newChatId = await handleNewChat(description);
+      if (newChatId) {
+        setIsLoading(true);
+        setMessages([{ sender: 'user', content: description }]);
+
+        try {
+          const aiResponse = await sendMessage(
+            newChatId,
+            description,
+            selectedModel,
+            selectedTemperature
+          );
+          setMessages((prevMessages) => [
+            ...prevMessages,
+            { sender: 'ai', content: aiResponse },
+          ]);
+        } catch (error) {
+          console.error(
+            'Error creating new chat and fetching AI response:',
+            error
+          );
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
   };
@@ -112,64 +130,75 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       });
   };
 
-  const fetchAIResponse = async (userMessage: string) => {
-    setIsLoading(true);
-    setError(null);
+  const handleNewMessage = async () => {
+    if ((!newMessage.trim()) || isLoading) return;
 
-    try {
-      const aiResponse = await sendMessage(
-        selectedChatId as string,
-        userMessage,
-        selectedModel,
-        selectedTemperature
-      );
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { sender: 'ai', content: aiResponse },
-      ]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          sender: 'ai',
-          content:
-            "I'm sorry, something went wrong while fetching the response.",
-        },
-      ]);
-      setError('There was an error generating the response. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const sendMessageHandler = async (lastUserMessage?: string) => {
-    if ((!newMessage.trim() && !lastUserMessage) || isLoading) return;
-
-    let userMessage = newMessage;
-    if (lastUserMessage) {
-      userMessage = lastUserMessage;
-    }
+    const userMessage = newMessage;
+  
 
     setMessages((prevMessages) => [
       ...prevMessages,
       { sender: 'user', content: userMessage },
     ]);
     setNewMessage('');
-    await fetchAIResponse(userMessage);
+    sendMessageHandler(userMessage);
+  };
+
+  const sendMessageHandler = async (messageContent: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const aiResponse = await sendMessage(selectedChatId, messageContent, selectedModel, selectedTemperature);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { sender: 'ai', content: aiResponse },
+      ]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setError('There was an error generating the response. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const regenerateResponse = async () => {
-    const lastUserMessage = messages
-      .reverse()
-      .find((msg) => msg.sender === 'user');
-
-    try {
-      console.log('Sending last user message:', lastUserMessage?.content);
-      setIsLoading(true);
-      sendMessageHandler(lastUserMessage?.content);
-    } finally {
-      setIsLoading(false);
+    setIsLoading(true);
+    const lastAiMessageIndex = [...messages].reverse().findIndex((msg) => msg.sender === 'ai');
+  
+    if (lastAiMessageIndex !== -1) {
+      const lastUserMessageIndex = messages
+        .slice(0, messages.length - 1 - lastAiMessageIndex)
+        .reverse()
+        .findIndex((msg) => msg.sender === 'user');
+        
+      const lastUserMessage =
+        lastUserMessageIndex !== -1
+          ? messages[messages.length - 1 - lastAiMessageIndex - lastUserMessageIndex - 1]
+          : null;
+  
+      try {
+        await axios.post(
+          `http://localhost:8000/api/regenerate-message/${selectedChatId}/`,
+          {},
+          {
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            withCredentials: true,
+          }
+        );
+  
+        // Remove the last AI message from the frontend state
+        setMessages((prevMessages) =>
+          prevMessages.filter((_, index) => index !== messages.length - 1 - lastAiMessageIndex)
+        );
+  
+        // Re-fetch AI response for the last user message
+        if (lastUserMessage) {
+          await sendMessageHandler(lastUserMessage.content);
+        }
+      } catch (error) {
+        console.error('Error regenerating message:', error);
+      }
     }
   };
 
@@ -262,7 +291,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               onInput={handleInput}
               onKeyDown={(e) => {
                 e.key === 'Enter' && !e.shiftKey && e.preventDefault();
-                e.key === 'Enter' && !e.shiftKey && sendMessageHandler();
+                e.key === 'Enter' && !e.shiftKey && handleNewMessage();
               }}
               className="w-full bg-background shadow-lg rounded-3xl max-h-[20vh] overflow-y-auto resize-none border p-4 pr-[65px] outline-none"
               style={{
@@ -274,7 +303,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               placeholder="Ask me something..."
             />
             <button
-              onClick={() => sendMessageHandler()}
+              onClick={() => handleNewMessage()}
               disabled={isLoading}
               className={`absolute right-3 bottom-4 p-2 rounded-full outline-none active:scale-95 active:outline-none transition-transform duration-75 ${
                 isLoading

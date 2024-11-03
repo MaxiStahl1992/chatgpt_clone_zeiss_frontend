@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { ArrowRightCircle, Cloud, CloudRain, Sun, Wind } from 'lucide-react';
 import { format } from 'date-fns';
+import LoadingDots from '../utils/LoadingDots';
 
 const WeatherCard: React.FC = () => {
   const [latitude, setLatitude] = useState<string>('48.1351');
@@ -26,7 +27,6 @@ const WeatherCard: React.FC = () => {
           const lon = position.coords.longitude.toString();
           setLatitude(lat);
           setLongitude(lon);
-          setLocationName('Your Location');
           reverseGeocode(lat, lon);
           fetchWeather(lat, lon);
         },
@@ -44,6 +44,7 @@ const WeatherCard: React.FC = () => {
           params: { latitude: lat, longitude: lon },
           withCredentials: true,
         });
+        console.log(response)
         setWeatherData(response.data);
       } catch (err) {
         console.error('Error fetching weather data:', err);
@@ -55,7 +56,6 @@ const WeatherCard: React.FC = () => {
 
     const reverseGeocode = async (lat: string, lon: string) => {
       try {
-        console.log(lat, lon)
         const response = await axios.get('https://nominatim.openstreetmap.org/reverse', {
           params: {
             lat,
@@ -63,8 +63,9 @@ const WeatherCard: React.FC = () => {
             format: 'json',
           },
         });
-        console.log(response)
-        setLocationName(response.data.address?.town || 'Your Location');
+        console.log(response.data);
+        const address = response.data.address;
+        setLocationName(address.town || address.city || address.village || "Unkown");
       } catch (err) {
         console.error('Error fetching location name:', err);
       }
@@ -74,7 +75,6 @@ const WeatherCard: React.FC = () => {
   }, []);
 
   const getWeatherIcon = (code: number) => {
-    console.log(code)
     if ([0].includes(code)) return <Sun size={40} color="#fbbf24" />; // Clear sky
     if ([1, 2, 3].includes(code)) return <Cloud size={40} color="#9ca3af" />; // Partly cloudy
     if ([45, 48].includes(code)) return <Cloud size={40} color="#6b7280" />; // Fog
@@ -95,7 +95,7 @@ const WeatherCard: React.FC = () => {
     if (degrees >= 202.5 && degrees < 247.5) return 'SW';
     if (degrees >= 247.5 && degrees < 292.5) return 'W';
     if (degrees >= 292.5 && degrees < 337.5) return 'NW';
-    return ''; // fallback if degrees are invalid
+    return '';
   };
 
   const today = format(new Date(), "MMMM d, yyyy");
@@ -104,7 +104,7 @@ const WeatherCard: React.FC = () => {
     <div className="bg-white p-4 rounded-lg shadow text-center">
       <h3 className="text-lg font-semibold mb-4">Weather Information for {locationName} on {today}</h3>
 
-      {loading && <p>Loading...</p>}
+      {loading && <LoadingDots />}
 
       {error && <p className="text-red-500 mt-4">{error}</p>}
 
