@@ -2,7 +2,7 @@ import React from 'react';
 
 const LoadingDots: React.FC = () => {
   return (
-    <div className="flex space-x-1">
+    <div className="ml-2 flex space-x-1">
       {[0, 1, 2].map((dot) => (
         <div
           key={dot}

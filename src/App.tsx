@@ -1,68 +1,63 @@
-import { useEffect, useState } from 'react';
+// src/App.tsx
+import { useInitializeApp } from '@/hooks/useInitializeApp';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import './App.css';
 import ChatWindow from './components/ChatWindow';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import LoadingDots from './components/utils/LoadingDots';
-import { Chat, createChat, deleteChat, fetchChats } from './services/chatService';
-import { checkAuthentication } from './services/authService';
-
+import { createChat, deleteChat } from './services/chatService';
+import { useCallback } from 'react';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [selectedModel, setSelectedModel] = useState<string>('');
-  const [selectedTemperature, setSelectedTemperature] = useState<string>('');
-  const [selectedChatId, setSelectedChatId] = useState<string>('');
-  const [chats, setChats] = useState<Chat[]>([]);
+  const {
+    isAuthenticated,
+    chats,
+    selectedChatId,
+    setSelectedChatId,
+    setChats,
+    selectedModel,
+    setSelectedModel,
+    selectedTemperature,
+    setSelectedTemperature,
+  } = useInitializeApp();
 
-  useEffect(() => {
-    const initialize = async () => {
-      try {
-        const authenticated = await checkAuthentication();
-        setIsAuthenticated(authenticated);
-        const chatsData = await fetchChats();
-        setChats(chatsData);
-        if (chatsData.length > 0) {
-          setSelectedChatId(chatsData[0].chatId);
-        }
-      } catch (error) {
-        console.error('Initialization failed:', error);
-      }
-    };
-    initialize();
-  }, []);
+  useAuthRedirect(isAuthenticated);
 
-  const handleNewChat = async () => {
+  const handleNewChat = useCallback(async (initialMessage?: string) => {
     try {
       const newChatId = await createChat();
-      setChats((prev) => [...prev, { chatId: newChatId, chatTitle: 'New Chat' }]);
+      setChats((prev) => [
+        ...prev,
+        { chatId: newChatId, chatTitle: 'New Chat' },
+      ]);
       setSelectedChatId(newChatId);
       return newChatId;
     } catch (error) {
       console.error('Error creating new chat:', error);
     }
-  };
+  }, [setChats, setSelectedChatId]);
 
-  const handleDeleteChat = async (chatId: string) => {
-    try {
-      await deleteChat(chatId);
-      setChats((prev) => prev.filter((chat) => chat.chatId !== chatId));
-      if (selectedChatId === chatId) {
-        const newSelectedChat = chats.find((chat) => chat.chatId !== chatId);
-        setSelectedChatId(newSelectedChat ? newSelectedChat.chatId : '');
+  const handleDeleteChat = useCallback(
+    async (chatId: string) => {
+      try {
+        await deleteChat(chatId);
+        setChats((prev) => prev.filter((chat) => chat.chatId !== chatId));
+        if (selectedChatId === chatId) {
+          const newSelectedChat = chats.find(
+            (chat) => chat.chatId !== chatId
+          );
+          setSelectedChatId(newSelectedChat ? newSelectedChat.chatId : '');
+        }
+      } catch (error) {
+        console.error('Error deleting chat:', error);
       }
-    } catch (error) {
-      console.error('Error deleting chat:', error);
-    }
-  };
+    },
+    [chats, selectedChatId, setChats, setSelectedChatId]
+  );
 
   if (isAuthenticated === null) {
     return <LoadingDots />;
-  }
-
-  if (!isAuthenticated) {
-    window.location.href = 'http://localhost:8000/login/';
-    return null;
   }
 
   return (
@@ -75,17 +70,17 @@ function App() {
       />
       <div className="flex flex-col flex-grow max-h-full">
         <Topbar
-          selectedModel={selectedModel}
-          selectedTemperature={selectedTemperature}
-          setSelectedModel={setSelectedModel}
-          setSelectedTemperature={setSelectedTemperature}
           handleNewChat={handleNewChat}
+          selectedModel={selectedModel}
+          setSelectedModel={setSelectedModel}
+          selectedTemperature={selectedTemperature}
+          setSelectedTemperature={setSelectedTemperature}
         />
         <ChatWindow
-          selectedModel={selectedModel}
-          selectedTemperature={selectedTemperature}
           selectedChatId={selectedChatId}
           handleNewChat={handleNewChat}
+          selectedModel={selectedModel}
+          selectedTemperature={selectedTemperature}
         />
       </div>
     </div>
