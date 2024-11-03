@@ -24,7 +24,7 @@ function App() {
 
   useAuthRedirect(isAuthenticated);
 
-  const handleNewChat = useCallback(async (initialMessage?: string) => {
+  const handleNewChat = useCallback(async () => {
     try {
       const newChatId = await createChat();
       setChats((prev) => [

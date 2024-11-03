@@ -29,7 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           <span>{chat.chatTitle || 'Untitled Chat'}</span>
           <TrashIcon
-            className="w-4 h-4 ml-2 cursor-pointer"
+            className="w-4 h-4 ml-2 mt-1 cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
               deleteChat(chat.chatId);
