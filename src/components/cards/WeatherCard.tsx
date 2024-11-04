@@ -4,6 +4,11 @@ import { ArrowRightCircle, Cloud, CloudRain, Sun, Wind } from 'lucide-react';
 import { format } from 'date-fns';
 import LoadingDots from '../utils/LoadingDots';
 
+type WindDirection = {
+  degrees: 0 | 45 | 90 | 135 | 180 | 225 | 270 | 315;
+  direction: 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
+}
+
 /**
  * WeatherCard component for displaying real-time weather data based on the user's location.
  * Automatically fetches the user’s geolocation and corresponding weather details.
@@ -104,16 +109,16 @@ const WeatherCard: React.FC = () => {
     return <Sun size={40} color="#9ca3af" />;
   };
 
-  const getWindDirection = (degrees: number) => {
-    if (degrees >= 337.5 || degrees < 22.5) return 'N';
-    if (degrees >= 22.5 && degrees < 67.5) return 'NE';
-    if (degrees >= 67.5 && degrees < 112.5) return 'E';
-    if (degrees >= 112.5 && degrees < 157.5) return 'SE';
-    if (degrees >= 157.5 && degrees < 202.5) return 'S';
-    if (degrees >= 202.5 && degrees < 247.5) return 'SW';
-    if (degrees >= 247.5 && degrees < 292.5) return 'W';
-    if (degrees >= 292.5 && degrees < 337.5) return 'NW';
-    return '';
+  const getWindDirection = (degrees: number): WindDirection => {
+    if (degrees >= 337.5 || degrees < 22.5) return { degrees: 270, direction: 'N' };
+    if (degrees >= 22.5 && degrees < 67.5) return { degrees: 315, direction: 'NE' };
+    if (degrees >= 67.5 && degrees < 112.5) return { degrees: 0, direction: 'E' };
+    if (degrees >= 112.5 && degrees < 157.5) return { degrees: 45, direction: 'SE' };
+    if (degrees >= 157.5 && degrees < 202.5) return { degrees: 90, direction: 'S' };
+    if (degrees >= 202.5 && degrees < 247.5) return { degrees: 135, direction: 'SW' };
+    if (degrees >= 247.5 && degrees < 292.5) return { degrees: 180, direction: 'W' };
+    if (degrees >= 292.5 && degrees < 337.5) return { degrees: 225, direction: 'NW' };
+    return { degrees: 0, direction: 'N' };
   };
 
   const today = format(new Date(), "MMMM d, yyyy");
@@ -141,9 +146,9 @@ const WeatherCard: React.FC = () => {
               <ArrowRightCircle
                 size={24}
                 color='#141E8C'
-                style={{ transform: `rotate(${weatherData.winddirection-60}deg)` }}
+                style={{ transform: `rotate(${getWindDirection(weatherData.winddirection).degrees}deg)` }}
               />
-              <span>Direction: {getWindDirection(weatherData.winddirection)}</span>
+              <span>Direction: {getWindDirection(weatherData.winddirection).direction}</span>
             </div>
           </div>
         </div>
