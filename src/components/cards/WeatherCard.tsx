@@ -141,7 +141,7 @@ const WeatherCard: React.FC = () => {
               <ArrowRightCircle
                 size={24}
                 color='#141E8C'
-                style={{ transform: `rotate(${weatherData.winddirection}deg)` }}
+                style={{ transform: `rotate(${weatherData.winddirection-60}deg)` }}
               />
               <span>Direction: {getWindDirection(weatherData.winddirection)}</span>
             </div>

@@ -5,7 +5,7 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
-    container_name: frontend-gptclone
+    container_name: react_zeiss_gpt
     volumes:
       - ./:/app
       - node_modules:/app/node_modules
