@@ -107,9 +107,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       <div className="flex-grow overflow-y-auto mb-4 max-h-[calc(100vh-190px)]">
         {messages.length === 0 && !isLoading && selectedChatId && (
           <div className="grid gap-4">
-            <div className="grid grid-cols-1 gap-4 mb-4">
+            <div className="mb-4">
               <WeatherCard />
             </div>
+            <p>Give it a try:</p>
             <div className="grid grid-cols-3 gap-4">
               {examplePrompts.map((prompt, index) => (
                 <PromptCard
